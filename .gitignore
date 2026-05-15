@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+.Rhistory
+
+# Editors
+.idea/
+.vscode/
+
+# Project outputs
+captures/
+auto_scan_log.csv
+runs/
+results/generated/
+*.log
+
+# Preserved local-only leftovers
+other/system_files/
+
+# Large files — store via Git LFS or a GitHub Release
+weights/*.pt
+weights/*.pth
+models/weights/*.pt
+models/weights/*.pth

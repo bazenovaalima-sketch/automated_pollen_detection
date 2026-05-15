@@ -1,0 +1,23 @@
+Pollen Detection Model Comparison
+
+
+Model comparison table:
+
+| Model | mAP50 | mAP50-95 | Precision | Recall | Inference (ms) | FPS | Size (MB) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| YOLOv8l | 0.8039 | 0.6064 | 0.8055 | 0.7319 | 30.67 | 32.6 | 333.7 |
+| YOLOv9e | 0.7797 | 0.4555 | 0.6589 | 0.7727 | 59.76 | 16.7 | 445.5 |
+| YOLOv10l | 0.7892 | 0.6128 | 0.7271 | 0.7138 | 31.11 | 32.1 | 198.0 |
+| YOLOv11l | 0.7912 | 0.6235 | 0.6811 | 0.7475 | 27.41 | 36.5 | 194.3 |
+| YOLOv26l | 0.8127 | 0.6272 | 0.6876 | 0.7886 | 28.80 | 34.7 | 201.1 |
+| RT-DETR | 0.7763 | 0.6058 | 0.7627 | 0.7749 | 40.75 | 24.5 | 251.8 |
+| YOLOv8l + TTA | 0.8158 | 0.6141 | 0.8069 | 0.7296 | 73.58 | 13.6 | 333.7 |
+| YOLOv26l + TTA | 0.8127 | 0.6272 | 0.6876 | 0.7886 | 27.74 | 36.0 | 201.1 |
+
+Summary:
+- Highest mAP50: YOLOv8l + TTA (0.8158)
+- Highest mAP50-95: YOLOv26l (0.6272)
+- Highest precision: YOLOv8l + TTA (0.8069)
+- Highest recall: YOLOv26l (0.7886)
+
+

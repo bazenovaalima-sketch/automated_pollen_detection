@@ -1,0 +1,39 @@
+Dataset Information
+
+Project name: fossil_pollen_dataset
+Project type: Object Detection
+Total images: 2007
+Total classes: 24
+Total annotations: 2778
+
+Classes and annotation counts:
++----+---------------------+-------+
+| No | Class name          | Count |
++----+---------------------+-------+
+|  1 | Aconitum            |    11 |
+|  2 | Alnus viridis       |    66 |
+|  3 | Apiaceae            |    31 |
+|  4 | Artemisia           |   308 |
+|  5 | Asteraceae          |    52 |
+|  6 | Betula pendula      |   147 |
+|  7 | Charcoal            |   226 |
+|  8 | Chenopodiaceae      |   143 |
+|  9 | Convolvulus         |    11 |
+| 10 | Cyperaceae          |    37 |
+| 11 | Fagus               |    11 |
+| 12 | Galium              |    10 |
+| 13 | Juniperus           |    15 |
+| 14 | Lycopodium          |   427 |
+| 15 | Other_pollen        |    81 |
+| 16 | Pediastrum boryanum |    45 |
+| 17 | Pediastrum integrum |    92 |
+| 18 | Picea               |    10 |
+| 19 | Pine                |   676 |
+| 20 | Pinus stomata       |    16 |
+| 21 | Poaceae             |   261 |
+| 22 | Rumex               |    57 |
+| 23 | Salix               |    29 |
+| 24 | Thalictrum          |    16 |
++----+---------------------+-------+
+
+Annotations were created and managed using Roboflow.
