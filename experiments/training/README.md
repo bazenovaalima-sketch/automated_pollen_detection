@@ -26,7 +26,7 @@ The dataset summary is stored in `../../data/Dataset_info.txt`.
 
 ## Current Script
 
-`train_rtdetr.py` trains RT-DETR-L and includes rare-class oversampling logic. It is kept because RT-DETR was part of the experimental comparison and thesis development history.
+`training.py` trains RT-DETR-L and includes rare-class oversampling logic. It is kept because RT-DETR was part of the experimental comparison and thesis development history.
 
 For the final discussion, use the consolidated results in:
 

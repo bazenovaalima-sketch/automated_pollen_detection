@@ -34,11 +34,10 @@ repo/
 │       ├── best_yolo10.pt
 │       ├── best_yolo11.pt
 │       └── best_rtdetr.pt
-├── src/
-│   └── pollen_scanner/
-│       ├── config.py
-│       ├── motor_control.py
-│       └── auto_scan.py
+├── scanner/
+│   ├── config.py
+│   ├── motor_control.py
+│   └── auto_scan.py
 ├── experiments/
 │   ├── training/
 │   ├── evaluation/
@@ -51,7 +50,7 @@ repo/
 │   └── heatmaps/
 ├── hardware/
     ├── arduino/
-    └── stl/
+    └── 3d_details/
 
 ```
 
@@ -137,9 +136,9 @@ Arduino wiring and setup images:
 
 3D-printable files:
 
-- `hardware/stl/base_stand.stl`
-- `hardware/stl/x-axis_drive_coupler.stl`
-- `hardware/stl/y-axis_drive_gear.stl`
+- `hardware/3d_details/base_stand.stl`
+- `hardware/3d_details/x-axis_drive_coupler.stl`
+- `hardware/3d_details/y-axis_drive_gear.stl`
 
 ## Installation
 
@@ -165,7 +164,7 @@ File -> Examples -> Firmata -> StandardFirmata
 
 ## Live Microscope Detection
 
-Edit `src/pollen_scanner/config.py` for your hardware:
+Edit `scanner/config.py` for your hardware:
 
 ```python
 SERIAL_PORT = "/dev/cu.usbmodem14101"
@@ -178,7 +177,7 @@ CONF_THRESHOLD = 0.30
 Run from the `repo/` directory:
 
 ```bash
-PYTHONPATH=src python3 -m pollen_scanner.auto_scan
+python3 -m scanner.auto_scan
 ```
 
 The application:
@@ -198,7 +197,7 @@ Press `q` to stop.
 Training:
 
 ```bash
-python3 experiments/training/train_rtdetr.py
+python3 experiments/training/training.py
 ```
 
 Model evaluation:

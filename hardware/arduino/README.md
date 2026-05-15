@@ -11,4 +11,4 @@ This project drives the Arduino MEGA 2560 directly from Python via the [Firmata]
 5. Select the correct **Port** under **Tools → Port**.
 6. Click **Upload** (→).
 
-Once flashed, the Python module `src/pollen_scanner/auto_scan.py` will connect over the same serial port. Set the port in `src/pollen_scanner/config.py` as `SERIAL_PORT`.
+Once flashed, the Python module `scanner/auto_scan.py` will connect over the same serial port. Set the port in `scanner/config.py` as `SERIAL_PORT`.
