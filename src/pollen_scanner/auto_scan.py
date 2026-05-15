@@ -1,15 +1,3 @@
-"""
-Main entry point for the automated pollen scanner.
-
-Runs two cooperating threads:
-  - Scanner thread: drives the X then Y stepper motors and signals the main
-    thread to log each new microscope position.
-  - Main thread: captures camera frames, runs YOLO/RT-DETR inference, displays
-    the annotated feed, and saves a CSV row for each detected object.
-
-Press `q` in the display window to stop cleanly.
-"""
-
 import os
 import time
 import threading
@@ -21,181 +9,257 @@ from ultralytics import RTDETR, YOLO
 
 try:
     from .config import (
-        SERIAL_PORT, CAMERA_INDEX,
-        X_MOTOR_PINS, Y_MOTOR_PINS,
-        MOVES_PER_AXIS, STEPS_PER_MOVE, STEP_DELAY, PAUSE_SECONDS,
-        MODEL_TYPE, MODEL_PATH, CONF_THRESHOLD, CAPTURE_DIR, LOG_CSV,
+        SERIAL_PORT,
+        CAMERA_INDEX,
+        X_MOTOR_PINS,
+        Y_MOTOR_PINS,
+        MOVES_PER_AXIS,
+        STEPS_PER_MOVE,
+        STEP_DELAY,
+        PAUSE_SECONDS,
+        MODEL_TYPE,
+        MODEL_PATH,
+        CONF_THRESHOLD,
+        CAPTURE_DIR,
+        LOG_CSV,
     )
     from .motor_control import attach_motor, release_motor, step_motor
 except ImportError:
     from config import (
-        SERIAL_PORT, CAMERA_INDEX,
-        X_MOTOR_PINS, Y_MOTOR_PINS,
-        MOVES_PER_AXIS, STEPS_PER_MOVE, STEP_DELAY, PAUSE_SECONDS,
-        MODEL_TYPE, MODEL_PATH, CONF_THRESHOLD, CAPTURE_DIR, LOG_CSV,
+        SERIAL_PORT,
+        CAMERA_INDEX,
+        X_MOTOR_PINS,
+        Y_MOTOR_PINS,
+        MOVES_PER_AXIS,
+        STEPS_PER_MOVE,
+        STEP_DELAY,
+        PAUSE_SECONDS,
+        MODEL_TYPE,
+        MODEL_PATH,
+        CONF_THRESHOLD,
+        CAPTURE_DIR,
+        LOG_CSV,
     )
     from motor_control import attach_motor, release_motor, step_motor
 
 
-# ---------------------------------------------------------------------------
-# Shared state between threads
-# ---------------------------------------------------------------------------
-current_frame      = None              # latest BGR frame from the camera
-capture_trigger    = threading.Event() # raised by scanner: log this position
-stop_event         = threading.Event() # raised by anyone: shut everything down
-current_move_info  = {"label": "X", "id": 0}
+current_frame = None
+frame_lock = threading.Lock()
+
+capture_trigger = threading.Event()
+stop_event = threading.Event()
+
+current_move_info = {
+    "axis": "X",
+    "move_id": 0,
+}
 
 
-# ---------------------------------------------------------------------------
-# Camera grabber thread — keeps `current_frame` always up to date
-# ---------------------------------------------------------------------------
 def camera_worker(cap):
     global current_frame
+
     while not stop_event.is_set():
-        ok, frame = cap.read()
-        if ok:
-            current_frame = frame
-        else:
+        success, frame = cap.read()
+
+        if not success:
             time.sleep(0.01)
+            continue
+
+        with frame_lock:
+            current_frame = frame.copy()
 
 
-# ---------------------------------------------------------------------------
-# Scanner thread — moves the motors, then waits for the main loop to log
-# ---------------------------------------------------------------------------
 def scanner_worker(x_motor, y_motor):
     try:
-        # --- PHASE 1: X axis ---
-        print("\n--- PHASE 1: MOVING X MOTOR ---")
-        for i in range(MOVES_PER_AXIS):
-            if stop_event.is_set():
-                break
-            print(f"\n[X Move {i+1}/{MOVES_PER_AXIS}] Moving...")
-            step_motor(x_motor, STEPS_PER_MOVE, STEP_DELAY)
-
-            print(f"Waiting {PAUSE_SECONDS}s for focus/settle...")
-            time.sleep(PAUSE_SECONDS)
-
-            current_move_info["label"] = "X"
-            current_move_info["id"]    = i + 1
-            capture_trigger.set()
-            while capture_trigger.is_set() and not stop_event.is_set():
-                time.sleep(0.05)
-
-        # --- PHASE 2: Y axis ---
-        print("\n--- PHASE 2: MOVING Y MOTOR ---")
-        for i in range(MOVES_PER_AXIS):
-            if stop_event.is_set():
-                break
-            print(f"\n[Y Move {i+1}/{MOVES_PER_AXIS}] Moving...")
-            step_motor(y_motor, STEPS_PER_MOVE, STEP_DELAY)
-
-            print(f"Waiting {PAUSE_SECONDS}s for focus/settle...")
-            time.sleep(PAUSE_SECONDS)
-
-            current_move_info["label"] = "Y"
-            current_move_info["id"]    = i + 1
-            capture_trigger.set()
-            while capture_trigger.is_set() and not stop_event.is_set():
-                time.sleep(0.05)
-
-        print("\n✅ All moves complete.")
-
-    except Exception as exc:
-        print(f"Scanner error: {exc}")
+        scan_axis("X", x_motor)
+        scan_axis("Y", y_motor)
+    except Exception as error:
+        print(f"Scanner error: {error}")
     finally:
         stop_event.set()
+
+
+def scan_axis(axis_name, motor):
+    print(f"Starting {axis_name}-axis scan")
+
+    for move_index in range(1, MOVES_PER_AXIS + 1):
+        if stop_event.is_set():
+            break
+
+        print(f"{axis_name}-axis move {move_index}/{MOVES_PER_AXIS}")
+
+        step_motor(
+            motor,
+            STEPS_PER_MOVE,
+            STEP_DELAY,
+        )
+
+        time.sleep(PAUSE_SECONDS)
+
+        current_move_info["axis"] = axis_name
+        current_move_info["move_id"] = move_index
+
+        capture_trigger.set()
+
+        while capture_trigger.is_set() and not stop_event.is_set():
+            time.sleep(0.05)
 
 
 def load_detector(model_type, model_path):
-    """Load the detector selected in config.py."""
     if model_type.lower() == "rtdetr":
         return RTDETR(model_path)
+
     return YOLO(model_path)
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-def main():
-    os.makedirs(CAPTURE_DIR, exist_ok=True)
+def initialize_arduino():
+    print(f"Connecting to Arduino on {SERIAL_PORT}")
 
-    # Arduino / motors
-    print(f"Connecting to Arduino on {SERIAL_PORT}...")
     board = Arduino(SERIAL_PORT)
-    it = util.Iterator(board)
-    it.start()
+
+    iterator = util.Iterator(board)
+    iterator.start()
+
     x_motor = attach_motor(board, X_MOTOR_PINS)
     y_motor = attach_motor(board, Y_MOTOR_PINS)
 
-    # Camera
+    return board, x_motor, y_motor
+
+
+def initialize_camera():
     cap = cv2.VideoCapture(CAMERA_INDEX)
+
     if not cap.isOpened():
         raise RuntimeError(f"Could not open camera index {CAMERA_INDEX}")
 
-    # Model
-    print(f"Loading {MODEL_TYPE} model from {MODEL_PATH}...")
-    model = load_detector(MODEL_TYPE, MODEL_PATH)
+    return cap
 
-    # Threads
-    cam_thread  = threading.Thread(target=camera_worker, args=(cap,), daemon=True)
-    scan_thread = threading.Thread(target=scanner_worker, args=(x_motor, y_motor), daemon=True)
-    cam_thread.start()
-    scan_thread.start()
 
-    results_log = []
-    print("🚀 Live feed with AI starting. Motors will follow.")
+def save_detections(results, model, annotated_frame, results_log):
+    axis = current_move_info["axis"]
+    move_id = current_move_info["move_id"]
+    detection_count = len(results.boxes)
+
+    if detection_count == 0:
+        print(f"No detections at {axis}{move_id}")
+        return
+
+    print(f"Found {detection_count} objects at {axis}{move_id}")
+
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    image_path = os.path.join(
+        CAPTURE_DIR,
+        f"detect_{timestamp}_{axis}{move_id}.jpg",
+    )
+
+    cv2.imwrite(image_path, annotated_frame)
+
+    for box in results.boxes:
+        class_id = int(box.cls[0])
+        confidence = float(box.conf[0])
+
+        results_log.append(
+            {
+                "Timestamp": time.strftime("%H:%M:%S"),
+                "Move_Type": axis,
+                "Move_ID": move_id,
+                "Label": model.names[class_id],
+                "Confidence": f"{confidence:.2f}",
+                "Image": image_path,
+            }
+        )
+
+    pd.DataFrame(results_log).to_csv(LOG_CSV, index=False)
+
+
+def main():
+    os.makedirs(CAPTURE_DIR, exist_ok=True)
+
+    board = None
+    cap = None
+    x_motor = None
+    y_motor = None
 
     try:
+        board, x_motor, y_motor = initialize_arduino()
+        cap = initialize_camera()
+
+        print(f"Loading {MODEL_TYPE} model from {MODEL_PATH}")
+        model = load_detector(MODEL_TYPE, MODEL_PATH)
+
+        camera_thread = threading.Thread(
+            target=camera_worker,
+            args=(cap,),
+            daemon=True,
+        )
+
+        scanner_thread = threading.Thread(
+            target=scanner_worker,
+            args=(x_motor, y_motor),
+            daemon=True,
+        )
+
+        camera_thread.start()
+        scanner_thread.start()
+
+        results_log = []
+
+        print("Scanner started")
+
         while not stop_event.is_set():
-            if current_frame is not None:
-                # ---- live inference ----
-                results = model.predict(source=current_frame,
-                                        conf=CONF_THRESHOLD,
-                                        verbose=False)[0]
-                annotated = results.plot()
-                cv2.imshow("ARM-2 Scanner Live View", annotated)
+            with frame_lock:
+                frame = None if current_frame is None else current_frame.copy()
 
-                # ---- scanner asked us to log this position ----
-                if capture_trigger.is_set():
-                    n = len(results.boxes)
-                    label = current_move_info["label"]
-                    move_id = current_move_info["id"]
+            if frame is None:
+                time.sleep(0.01)
+                continue
 
-                    if n > 0:
-                        print(f"✅ Found {n} objects at {label}{move_id}")
-                        ts = time.strftime("%Y%m%d_%H%M%S")
-                        img_path = f"{CAPTURE_DIR}/detect_{ts}_{label}{move_id}.jpg"
-                        cv2.imwrite(img_path, annotated)
+            results = model.predict(
+                source=frame,
+                conf=CONF_THRESHOLD,
+                verbose=False,
+            )[0]
 
-                        for box in results.boxes:
-                            results_log.append({
-                                "Timestamp" : time.strftime("%H:%M:%S"),
-                                "Move_Type" : label,
-                                "Move_ID"   : move_id,
-                                "Label"     : model.names[int(box.cls[0])],
-                                "Confidence": f"{float(box.conf[0]):.2f}",
-                                "Image"     : img_path,
-                            })
-                        pd.DataFrame(results_log).to_csv(LOG_CSV, index=False)
-                    else:
-                        print(f"⚪️ No detections at {label}{move_id}")
+            annotated_frame = results.plot()
+            cv2.imshow("Pollen Scanner Live View", annotated_frame)
 
-                    capture_trigger.clear()
+            if capture_trigger.is_set():
+                save_detections(
+                    results,
+                    model,
+                    annotated_frame,
+                    results_log,
+                )
+
+                capture_trigger.clear()
 
             if cv2.waitKey(1) & 0xFF == ord("q"):
+                stop_event.set()
                 break
 
     except KeyboardInterrupt:
-        pass
-    finally:
-        print("Cleaning up...")
         stop_event.set()
-        release_motor(x_motor)
-        release_motor(y_motor)
-        board.exit()
-        cap.release()
+
+    finally:
+        print("Cleaning up")
+
+        stop_event.set()
+
+        if x_motor is not None:
+            release_motor(x_motor)
+
+        if y_motor is not None:
+            release_motor(y_motor)
+
+        if board is not None:
+            board.exit()
+
+        if cap is not None:
+            cap.release()
+
         cv2.destroyAllWindows()
-        print("Closed.")
+
+        print("Closed")
 
 
 if __name__ == "__main__":

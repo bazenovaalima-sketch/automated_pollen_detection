@@ -1,8 +1,8 @@
 # Automated Pollen Identification and Microscope Scanning
 
-This repository contains the code, hardware files, model checkpoints, and evaluation artifacts for a master thesis project on automated pollen identification. The project has two connected parts:
+This repository contains the code, hardware files, model checkpoints, and evaluation artifacts for a project on automated pollen identification. The project has two connected parts:
 
-1. A computer-vision pipeline for detecting 24 pollen and microscopy-related classes in microscope images.
+1. A computer-vision pipeline for detecting 24 pollen taxas and microscopy-related classes in microscope images.
 2. A prototype automated microscope stage controlled by Arduino and stepper motors, with live object detection from a microscope camera.
 
 The final research comparison focuses on **YOLOv8l** and **YOLOv26l**. YOLOv26l gives the strongest clean validation metrics for mAP50-95 and recall, while YOLOv8l is more robust under blur, darkness, and noise. For deployment in the live microscope scanner, YOLOv8l is used by default because microscope acquisition can easily suffer from focus, illumination, and sensor-noise variation.
@@ -14,6 +14,8 @@ The final research comparison focuses on **YOLOv8l** and **YOLOv26l**. YOLOv26l 
 - Deeper comparison of YOLOv8l and YOLOv26l using standard validation, test-time augmentation, robustness tests, heatmaps, and validation-image visual inspection.
 - Arduino MEGA based microscope-stage automation using two 28BYJ-48 stepper motors and ULN2003 driver boards.
 - Live microscope camera loop that moves the stage, runs detection, displays annotated frames, saves positive detections, and logs results to CSV.
+
+![Microscope automation setup](hardware/arduino/setup.png)
 
 ## Repository Structure
 
@@ -48,17 +50,10 @@ repo/
 │   ├── robustness/
 │   └── heatmaps/
 ├── hardware/
-│   ├── arduino/
-│   └── stl/
-├── docs/
-│   └── publication/
-└── other/
-    ├── legacy_docs/
-    ├── legacy_empty_layout/
-    └── system_files/
-```
+    ├── arduino/
+    └── stl/
 
-The `other/` folder keeps old duplicate files, generated cache files, and previous empty layout folders. Nothing was deleted during reorganization.
+```
 
 ## Dataset
 
@@ -72,7 +67,7 @@ Dataset summary from `data/Dataset_info.txt`:
 | Total classes | 24 |
 | Annotation platform | Roboflow |
 
-The dataset is strongly class-imbalanced. Pine, Lycopodium, Artemisia, Poaceae, and Charcoal dominate the annotation distribution, while classes such as Galium, Picea, Aconitum, Convolvulus, and Fagus have very few samples. This imbalance is important when interpreting per-class metrics and robustness.
+The dataset is strongly class-imbalanced. Pine, Lycopodium, Artemisia, Poaceae, and Charcoal dominate the annotation distribution, while classes such as Galium, Picea, Aconitum, Convolvulus, and Fagus have very few samples. To reduce class imbalance, rare pollen taxa were oversampled during training using Albumentations. Images containing underrepresented classes were augmented with color shifts, blur, noise, rotations, and horizontal/vertical flips while preserving YOLO-format bounding boxes. This helped increase the representation of rare taxa without changing the original validation/test sets.
 
 ## Model Comparison
 
@@ -242,7 +237,7 @@ Suggested discussion focus:
 
 ## Notes on Large Files
 
-The model checkpoints in `models/weights/` are large. For GitHub publication, use Git LFS, GitHub Releases, Zenodo, or another artifact host instead of normal git commits.
+The model checkpoints in `models/weights/` are large. 
 
 ## License
 
