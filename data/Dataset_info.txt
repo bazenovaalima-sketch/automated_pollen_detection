@@ -2,6 +2,7 @@ Dataset Information
 
 Project name: fossil_pollen_dataset
 Project type: Object Detection
+Roboflow dataset version: https://app.roboflow.com/alimas-workspace/fossil_pollen/3
 Total images: 2007
 Total classes: 24
 Total annotations: 2778

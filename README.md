@@ -65,6 +65,7 @@ Dataset summary from `data/Dataset_info.txt`:
 | Total annotations | 2,778 |
 | Total classes | 24 |
 | Annotation platform | Roboflow |
+| Dataset version | [fossil_pollen v3](https://app.roboflow.com/alimas-workspace/fossil_pollen/3) |
 
 The dataset is strongly class-imbalanced. Pine, Lycopodium, Artemisia, Poaceae, and Charcoal dominate the annotation distribution, while classes such as Galium, Picea, Aconitum, Convolvulus, and Fagus have very few samples. To reduce class imbalance, rare pollen taxa were oversampled during training using Albumentations. Images containing underrepresented classes were augmented with color shifts, blur, noise, rotations, and horizontal/vertical flips while preserving YOLO-format bounding boxes. This helped increase the representation of rare taxa without changing the original validation/test sets.
 
