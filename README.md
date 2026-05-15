@@ -236,7 +236,7 @@ Suggested discussion focus:
 
 ## Notes on Large Files
 
-The model checkpoints in `models/weights/` are large. 
+The model checkpoints in `models/weights/` are stored with Git LFS because the `.pt` files are too large for normal GitHub commits.
 
 ## License
 

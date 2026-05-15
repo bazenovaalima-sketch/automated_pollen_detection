@@ -1,5 +1,7 @@
 # Model Weights
 
+The `.pt` checkpoints in this folder are stored with Git LFS.
+
 Local checkpoints currently used by the project:
 
 - `best_yolo8.pt` - default deployment model for live microscope scanning.
@@ -8,4 +10,3 @@ Local checkpoints currently used by the project:
 - `best_yolo10.pt`
 - `best_yolo11.pt`
 - `best_rtdetr.pt`
-
