@@ -46,7 +46,6 @@ repo/
 ├── build_unified_dataset.py     # raw per-depth Roboflow exports -> unified_dataset/ (depth split)
 ├── build_random_split.py        # unified_dataset/ -> unified_dataset_random/ (leakage ablation)
 ├── build_oversampled_dataset.py # unified_dataset/ -> unified_dataset_oversampled/ (oversampling ablation)
-├── yolo_to_coco.py               # unified_dataset/ -> unified_dataset_coco/ (for RF-DETR)
 ├── eval_grouped.py                # Group A / Group B macro-mAP evaluation for one checkpoint
 ├── training/                      # Colab/Kaggle "paste cell-by-cell" training scripts
 │   ├── train_yolo.py              # all 6 YOLO variants, 3 seeds each
@@ -65,9 +64,7 @@ repo/
 │   ├── robustness_results/        # corruption-sweep results
 │   ├── expert_comparison/         # model vs. expert relative abundances
 │   └── paper_assets/              # generated master table + figures
-├── requirements.txt
 ├── requirements-training.txt
-├── data/Dataset_info.txt          # legacy 24-class dataset info (earlier prototype)
 ├── hardware/                       # Arduino microscope-scanner prototype
 ├── scanner/                         # live detection + stage control
 ├── models/weights/                  # legacy 24-class checkpoints (Git LFS)
@@ -225,14 +222,6 @@ Flash **StandardFirmata** to the Arduino MEGA via
 for your serial port, camera index, and model path.
 
 ## Citation
-
-If you use this code, please cite the paper (manuscript submitted to
-*Journal of Imaging*):
-
-> Bazenova, A., Pál, I., & Magyari, E. K. *Leakage-Free Benchmarking of CNN
-> and Transformer Detectors for Automated Fossil Pollen Identification.*
-> Journal of Imaging (submitted).
-
 If you use the dataset, please cite:
 
 > Bazenova, A. (2026). *Fossil Pollen Detection Dataset (LIL-DEEP, Lake
