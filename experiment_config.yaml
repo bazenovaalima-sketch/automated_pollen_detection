@@ -1,0 +1,96 @@
+# ============================================================================
+# experiment_config.yaml
+# Single source of truth for the fossil-pollen detection benchmark.
+# Everything here goes into the paper's Methods + reproducibility statement.
+# ============================================================================
+
+project:
+  title: "Robust Object Detection for Fossil Pollen Microscopy"
+  author: "Alima Bazenova"
+  institution: "Eötvös Loránd University (ELTE)"
+  code_repo: "https://github.com/bazenovaalima-sketch/automated_pollen_detection"
+  git_commit: "7fc15a6395d5b2201f1fb9fe919cb8dabedcd02a"
+  dataset_doi: "10.5281/zenodo.20549576"
+
+# ---------------------------------------------------------------------------
+# Hardware used for ANALYSIS and local runs (record the training GPU separately
+# once the 18-run benchmark is done on cloud).
+# ---------------------------------------------------------------------------
+hardware_local:
+  machine: "MacBook Pro (MacBookPro18,3)"
+  chip: "Apple M1 Pro"
+  cpu_cores: 8
+  ram_gb: 16
+  os: "macOS 14.2.1"
+  accelerator: "MPS (Apple Silicon GPU)"
+
+hardware_training:           # fill in after you run the benchmark
+  gpu: "TBD (e.g. NVIDIA T4 / A100 on Colab/Kaggle)"
+  notes: "All FPS values in the paper must come from THIS single GPU."
+
+# ---------------------------------------------------------------------------
+# Software versions (frozen)
+# ---------------------------------------------------------------------------
+software:
+  python: "3.13.0"
+  torch: "2.12.0"
+  ultralytics: "8.4.51"
+  numpy: "2.4.5"
+  opencv: "4.13.0"
+  pyyaml: "6.0.3"
+  pillow: "12.2.0"
+  pandas: "3.0.3"
+  matplotlib: "3.10.9"
+
+# ---------------------------------------------------------------------------
+# Dataset
+# ---------------------------------------------------------------------------
+dataset:
+  name: "LIL-DEEP fossil pollen detection (unified, 22-class)"
+  path: "unified_dataset/"
+  total_images: 3001
+  total_annotations: 8460
+  num_classes: 22
+  split_strategy: "depth-based (leakage-free)"
+  split:
+    train: ["1101", "1102", "1104", "1148"]   # 2523 images
+    valid: ["1012"]                            # 120 images
+    test:  ["1188"]                            # 358 images (held out)
+
+# ---------------------------------------------------------------------------
+# Class grouping for reporting (Group A = primary mAP; Group B reported separately)
+# ---------------------------------------------------------------------------
+class_groups:
+  group_A_pollen:        # primary macro-mAP computed over these
+    [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+  group_B_npp:           # non-pollen palynomorphs, reported separately
+    [15,16,17,18,19,20,21]
+  rationale: >
+    HdV-128 and other non-pollen palynomorphs (Lycopodium, Charcoal, Pediastrum,
+    Pinus stomata) are reported separately from the pollen sum following standard
+    palynological practice (van Geel, 2001), and excluded from the primary
+    macro-mAP because their abundance is strongly depth-dependent.
+
+# ---------------------------------------------------------------------------
+# Training hyperparameters — IDENTICAL for all benchmarked models
+# ---------------------------------------------------------------------------
+training:
+  models: ["yolov8l", "yolov9", "yolov10l", "yolov11l", "yolov26l", "rtdetr-l"]
+  init: "COCO-pretrained (same starting point for all models)"
+  seeds: [0, 1, 2]
+  epochs: 100
+  imgsz: 640
+  batch: 8
+  optimizer: "auto (AdamW)"
+  patience: 20            # early stopping
+  conf_threshold_eval: 0.001   # for mAP (threshold-free); 0.30 only for count-based comparison
+  augmentation: "Ultralytics defaults (mosaic, mixup, hsv, scale, flip) — identical across models"
+
+# ---------------------------------------------------------------------------
+# Evaluation
+# ---------------------------------------------------------------------------
+evaluation:
+  primary_metric: "macro-mAP@0.5 over Group A (pollen)"
+  secondary_metrics: ["mAP@0.5:0.95", "per-class AP", "precision", "recall", "FPS", "model_size_MB"]
+  npp_reporting: "Group B reported as a separate per-class block, not in primary mAP"
+  report_format: "mean ± SD over 3 seeds"

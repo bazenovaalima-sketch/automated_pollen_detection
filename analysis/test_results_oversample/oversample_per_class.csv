@@ -1,0 +1,23 @@
+id,class,group,oversample_AP50_mean,n_seeds
+0,Pine,Pollen,0.8647728183619389,3
+1,Artemisia,Pollen,0.9327088202439963,3
+2,Poaceae,Pollen,0.5990093843211426,3
+3,Betula pendula,Pollen,0.44075320654966504,3
+4,Chenopodiaceae,Pollen,0.8677877886617833,3
+5,Picea,Pollen,0.37006060606060603,3
+6,Alnus viridis,Pollen,0.6063095238095237,3
+7,Rumex,Pollen,0.08747866987592905,3
+8,Ulmus,Pollen,0.046104017323775386,3
+9,Asteraceae,Pollen,0.5737262054563426,3
+10,Cyperaceae,Pollen,0.1644996779009215,3
+11,Apiaceae,Pollen,0.9578571428571429,3
+12,Fagus,Pollen,,0
+13,Salix,Pollen,0.2064896616541353,3
+14,Other_pollen,Pollen,0.19218563818709294,3
+15,Type-128,NPP,,0
+16,Lycopodium,NPP,0.921379831100628,3
+17,Charcoal,NPP,0.8477294328010186,3
+18,Pediastrum integrum,NPP,0.5638333333333333,3
+19,Pediastrum boryanum,NPP,,0
+20,Pinus stomata,NPP,0.0,3
+21,Other_NPP,NPP,0.0043905007011219525,3

@@ -2,5 +2,6 @@
 albumentations>=1.4.0
 matplotlib>=3.8
 seaborn>=0.13
+scipy>=1.11
 tqdm>=4.66
 openpyxl>=3.1

@@ -29,3 +29,19 @@ weights/*.pt
 weights/*.pth
 models/weights/*.pt
 models/weights/*.pth
+
+# Dataset archives and full image/label trees — released on Zenodo instead
+*.zip
+unified_dataset/
+unified_dataset_coco/
+unified_dataset_oversampled/
+unified_dataset_random/
+finetune_data/
+roboflow_upload/
+data/dataset extention/
+
+# Per-run training outputs (weights, logs) and bulky local result dumps
+pollen_benchmark/
+pollen_benchmark_*/
+results/test_1020_depth/
+results/finetune/

@@ -1,145 +1,201 @@
-# Automated Pollen Identification and Microscope Scanning
+# Leakage-Free Benchmarking of CNN and Transformer Detectors for Automated Fossil Pollen Identification
 
-This repository contains the code, hardware files, model checkpoints, and evaluation artifacts for a project on automated pollen identification. The project has two connected parts:
+Code and reproducibility materials for the paper *"Leakage-Free Benchmarking of
+CNN and Transformer Detectors for Automated Fossil Pollen Identification"*
+(Bazenova, Pál & Magyari), submitted to *Journal of Imaging*.
 
-1. A computer-vision pipeline for detecting 24 pollen taxas and microscopy-related classes in microscope images.
-2. A prototype automated microscope stage controlled by Arduino and stepper motors, with live object detection from a microscope camera.
+The project benchmarks **seven object detectors** (six YOLO variants + RT-DETR)
+on a custom microscopy dataset of fossil pollen and non-pollen palynomorphs
+(NPPs) from the LIL-DEEP sediment core, Lake Latoriței, Southern Carpathians,
+Romania, using a **depth-based, leakage-free train/val/test split**. It also
+includes two ablations (a random-split leakage estimate and a rare-class
+oversampling experiment), a multi-corruption robustness benchmark, and a
+comparison against expert pollen counts on independent slides.
 
-The final research comparison focuses on **YOLOv8l** and **YOLOv26l**. YOLOv26l gives the strongest clean validation metrics for mAP50-95 and recall, while YOLOv8l is more robust under blur, darkness, and noise. For deployment in the live microscope scanner, YOLOv8l is used by default because microscope acquisition can easily suffer from focus, illumination, and sensor-noise variation.
+A related, earlier-stage component — an Arduino-driven automated microscope
+stage with live detection — is kept in this repo for reference; see
+[Related Prototype](#related-prototype-automated-microscope-stage) below.
 
 ## Project Highlights
 
-- Custom pollen object-detection dataset with **2,007 images**, **2,778 annotations**, and **24 classes**.
-- Evaluation of six detector checkpoints: YOLOv8l, YOLOv9e, YOLOv10l, YOLOv11l, YOLOv26l, and RT-DETR.
-- Deeper comparison of YOLOv8l and YOLOv26l using standard validation, test-time augmentation, robustness tests, heatmaps, and validation-image visual inspection.
-- Arduino MEGA based microscope-stage automation using two 28BYJ-48 stepper motors and ULN2003 driver boards.
-- Live microscope camera loop that moves the stage, runs detection, displays annotated frames, saves positive detections, and logs results to CSV.
-
-![Microscope automation setup](hardware/arduino/setup.png)
+- **3,001 microscope images / 8,460 annotations / 22 classes** (15 pollen taxa
+  + 7 non-pollen palynomorphs), see [DATASET_README.md](DATASET_README.md).
+  Dataset archived on Zenodo: [DOI 10.5281/zenodo.20549576](https://doi.org/10.5281/zenodo.20549576).
+- **Depth-based split** (train: depths 1101/1102/1104/1148; valid: 1012; test:
+  1188, fully held out) — no slide appears in more than one split.
+- **Seven detectors benchmarked** under an identical training protocol:
+  YOLOv8l, YOLOv9c, YOLOv10l, YOLOv11l, YOLOv12l, YOLOv26l, RT-DETR-l.
+- **Leakage ablation**: a random (non-depth-aware) split inflates Group A
+  mAP@0.5 by **+0.253 (+51%)** for the same model and hyperparameters.
+- **Oversampling ablation**: 3x duplication of rare-class images leaves Group A
+  mAP@0.5 essentially unchanged (0.494 vs. 0.496) — the bottleneck is data
+  quantity, not sampling.
+- **Robustness benchmark**: YOLOv12l evaluated under Gaussian blur, additive
+  Gaussian noise, and reduced brightness at 5 severity levels.
+- **Expert comparison**: model-derived relative pollen abundances on 3
+  independent slides correlate with expert counts (Pearson r=0.86, Spearman
+  rho=0.80).
 
 ## Repository Structure
 
 ```text
 repo/
 ├── README.md
+├── DATASET_README.md            # dataset description, classes, split, citation
+├── experiment_config.yaml       # single source of truth: hyperparameters, split, software versions
+├── build_unified_dataset.py     # raw per-depth Roboflow exports -> unified_dataset/ (depth split)
+├── build_random_split.py        # unified_dataset/ -> unified_dataset_random/ (leakage ablation)
+├── build_oversampled_dataset.py # unified_dataset/ -> unified_dataset_oversampled/ (oversampling ablation)
+├── yolo_to_coco.py               # unified_dataset/ -> unified_dataset_coco/ (for RF-DETR)
+├── eval_grouped.py                # Group A / Group B macro-mAP evaluation for one checkpoint
+├── training/                      # Colab/Kaggle "paste cell-by-cell" training scripts
+│   ├── train_yolo.py              # all 6 YOLO variants, 3 seeds each
+│   ├── train_rtdetr.py            # RT-DETR-l, 3 seeds
+│   ├── ablation_random_split.py   # leakage ablation (YOLOv12l on the random split)
+│   ├── ablation_oversample.py     # oversampling ablation (YOLOv12l)
+│   └── train_rfdetr.py            # RF-DETR-Large (transformer baseline, future work)
+├── analysis/                       # evaluation outputs + figure/table generation
+│   ├── make_paper_assets.py       # master results table + main figures
+│   ├── make_diagnostic_figures.py # confusion matrices + qualitative detections
+│   ├── eval_robustness.py         # multi-severity corruption benchmark
+│   ├── test_results/              # master 7-model benchmark (test slide 1188)
+│   ├── test_results_random/       # leakage-ablation results
+│   ├── test_results_oversample/   # oversampling-ablation results
+│   ├── speed_results/             # inference speed / model size
+│   ├── robustness_results/        # corruption-sweep results
+│   ├── expert_comparison/         # model vs. expert relative abundances
+│   └── paper_assets/              # generated master table + figures
 ├── requirements.txt
 ├── requirements-training.txt
-├── data/
-│   └── Dataset_info.txt
-├── models/
-│   └── weights/
-│       ├── best_yolo8.pt
-│       ├── best_yolo26.pt
-│       ├── best_yolo9.pt
-│       ├── best_yolo10.pt
-│       ├── best_yolo11.pt
-│       └── best_rtdetr.pt
-├── scanner/
-│   ├── config.py
-│   ├── motor_control.py
-│   └── auto_scan.py
-├── experiments/
-│   ├── training/
-│   ├── evaluation/
-│   ├── robustness/
-│   └── explainability/
-├── results/
-│   ├── model_comparison/
-│   ├── model_evaluation/
-│   ├── robustness/
-│   └── heatmaps/
-├── hardware/
-    ├── arduino/
-    └── 3d_details/
-
+├── data/Dataset_info.txt          # legacy 24-class dataset info (earlier prototype)
+├── hardware/                       # Arduino microscope-scanner prototype
+├── scanner/                         # live detection + stage control
+├── models/weights/                  # legacy 24-class checkpoints (Git LFS)
+├── experiments/, results/             # legacy 24-class thesis-stage experiments
+└── LICENSE
 ```
 
 ## Dataset
 
-Dataset summary from `data/Dataset_info.txt`:
+Full description, class list, and the depth-based split table are in
+[DATASET_README.md](DATASET_README.md). The dataset itself (images + YOLO
+labels + `data.yaml`) is **not** stored in this repository — download it from
+Zenodo ([DOI 10.5281/zenodo.20549576](https://doi.org/10.5281/zenodo.20549576))
+and place it at `repo/unified_dataset/`.
 
-| Property | Value |
-|---|---:|
-| Project type | Object Detection |
-| Total images | 2,007 |
-| Total annotations | 2,778 |
-| Total classes | 24 |
-| Annotation platform | Roboflow |
-| Dataset version | [fossil_pollen v3](https://app.roboflow.com/alimas-workspace/fossil_pollen/3) |
+To rebuild the unified dataset from the raw per-depth Roboflow exports
+yourself (not redistributed here), run `build_unified_dataset.py` from
+`repo/` with an `Annotated data/` folder containing the six per-depth export
+folders (1101, 1102, 1104, 1148, 1012, 1188).
 
-The dataset is strongly class-imbalanced. Pine, Lycopodium, Artemisia, Poaceae, and Charcoal dominate the annotation distribution, while classes such as Galium, Picea, Aconitum, Convolvulus, and Fagus have very few samples. To reduce class imbalance, rare pollen taxa were oversampled during training using Albumentations. Images containing underrepresented classes were augmented with color shifts, blur, noise, rotations, and horizontal/vertical flips while preserving YOLO-format bounding boxes. This helped increase the representation of rare taxa without changing the original validation/test sets.
+## Reproducing the Benchmark
 
-## Model Comparison
+1. **Get the dataset.** Download from Zenodo and unzip to
+   `repo/unified_dataset/` (or rebuild it with `build_unified_dataset.py`).
+2. **(Ablations only)** Build the auxiliary datasets:
+   - `python build_random_split.py` -> `unified_dataset_random/`
+   - `python build_oversampled_dataset.py` -> `unified_dataset_oversampled/`
+   - `python yolo_to_coco.py --src unified_dataset --dst unified_dataset_coco`
+     (for RF-DETR)
+3. **Train.** Zip the relevant dataset folder, upload it to Google Drive, and
+   run the corresponding script in `training/` cell-by-cell in Google Colab
+   (T4 GPU). Each script trains 3 seeds with identical hyperparameters (see
+   `experiment_config.yaml`), backing up checkpoints to Drive every epoch and
+   resuming automatically after disconnects. Each run produces
+   `<run_name>/weights/best.pt`.
+4. **Collect runs.** Copy/symlink the completed `<run_name>/` directories into
+   `repo/analysis/pollen_benchmark/` (main benchmark),
+   `repo/analysis/pollen_benchmark_random/` (leakage ablation), and
+   `repo/analysis/pollen_benchmark_oversample/` (oversampling ablation).
+5. **Evaluate.** From `repo/analysis/`:
+   - `python ../eval_grouped.py --weights pollen_benchmark/<run>/weights/best.pt --split test`
+     for Group A / Group B macro-mAP of a single checkpoint.
+   - `python eval_robustness.py` for the corruption-severity sweep
+     (YOLOv12l seed 1).
+   - `python make_diagnostic_figures.py` for confusion matrices and the
+     qualitative detection panel (top-2 models).
+   - `python make_paper_assets.py` for the master results table and the
+     remaining paper figures.
 
-The full comparison table is stored in `results/model_comparison/pollen_models_comparison.txt`.
+The CSVs already included under `analysis/*_results/` and
+`analysis/paper_assets/master_results.csv` are the final results reported in
+the paper, so the figures and table can be regenerated without re-running any
+training.
 
-| Model | mAP50 | mAP50-95 | Precision | Recall | Inference (ms) | FPS | Size (MB) |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| YOLOv8l | 0.8039 | 0.6064 | 0.8055 | 0.7319 | 30.67 | 32.6 | 333.7 |
-| YOLOv9e | 0.7797 | 0.4555 | 0.6589 | 0.7727 | 59.76 | 16.7 | 445.5 |
-| YOLOv10l | 0.7892 | 0.6128 | 0.7271 | 0.7138 | 31.11 | 32.1 | 198.0 |
-| YOLOv11l | 0.7912 | 0.6235 | 0.6811 | 0.7475 | 27.41 | 36.5 | 194.3 |
-| YOLOv26l | 0.8127 | 0.6272 | 0.6876 | 0.7886 | 28.80 | 34.7 | 201.1 |
-| RT-DETR | 0.7763 | 0.6058 | 0.7627 | 0.7749 | 40.75 | 24.5 | 251.8 |
-| YOLOv8l + TTA | 0.8158 | 0.6141 | 0.8069 | 0.7296 | 73.58 | 13.6 | 333.7 |
-| YOLOv26l + TTA | 0.8127 | 0.6272 | 0.6876 | 0.7886 | 27.74 | 36.0 | 201.1 |
+## Results
 
-Main observations:
+### Master Benchmark (held-out test slide 1188)
 
-- Highest mAP50: **YOLOv8l + TTA** at 0.8158.
-- Highest mAP50-95: **YOLOv26l** at 0.6272.
-- Highest precision: **YOLOv8l + TTA** at 0.8069.
-- Highest recall: **YOLOv26l** at 0.7886.
-- Best practical robustness: **YOLOv8l**, especially under blur, darkness, and noise.
+Mean +/- SD over 3 seeds, except RT-DETR-l (n=2; one seed's run was lost).
+FPS measured on an Apple M1 Pro, batch size 1, imgsz 640.
 
-## Robustness Results
+| Model     | Group A mAP@0.5   | Group B mAP@0.5 | mAP@0.5:0.95 | Params (M) | Size (MB) | FPS |
+|-----------|------------------:|----------------:|-------------:|-----------:|----------:|----:|
+| YOLOv12l  | **0.496 +/- 0.035** | 0.499          | 0.398        | 26.41      | 53.6      | 7.9 |
+| RT-DETR-l | 0.490 +/- 0.001   | 0.482          | 0.364        | 32.85      | 66.3      | 7.9 |
+| YOLOv8l   | 0.484 +/- 0.004   | 0.444          | 0.378        | 43.65      | 87.7      | 9.9 |
+| YOLOv9c   | 0.474 +/- 0.027   | 0.494          | 0.380        | 25.55      | 51.6      | 10.7 |
+| YOLOv26l  | 0.459 +/- 0.043   | **0.504**      | 0.371        | 26.21      | 53.0      | 9.1 |
+| YOLOv10l  | 0.456 +/- 0.038   | 0.463          | 0.364        | 25.80      | 52.2      | 9.3 |
+| YOLOv11l  | 0.449 +/- 0.034   | 0.436          | 0.360        | 25.33      | 51.2      | **10.1** |
 
-YOLOv8l and YOLOv26l were tested on distorted validation data to simulate common microscopy problems: out-of-focus images, sensor noise, and poor illumination.
+Group A (pollen, 15 classes) is the primary metric; Group B (non-pollen
+palynomorphs, 7 classes) is reported separately. Classes absent from a split
+(Fagus and Type-128 have no test instances) are excluded from the
+corresponding macro-average. YOLOv12l is the best detector overall and is used
+for the ablations and robustness benchmark below.
 
-| Scenario | YOLOv26l mAP50 | YOLOv8l mAP50 | Delta (26l - 8l) |
-|---|---:|---:|---:|
-| Clean | 0.8127 | 0.8039 | +0.0088 |
-| Blur | 0.7903 | 0.8122 | -0.0220 |
-| Darkness | 0.7952 | 0.8074 | -0.0122 |
-| Noise | 0.5940 | 0.6518 | -0.0578 |
+### Leakage Ablation (random vs. depth-based split)
 
-Interpretation: YOLOv26l is slightly better on clean validation images, but YOLOv8l is more stable under degraded microscope conditions. This supports YOLOv8l as the default deployment model for the live scanning prototype.
+YOLOv12l, identical hyperparameters, 3 seeds, evaluated on the corresponding
+test split:
 
-## Explainability and Visual Comparison
+| Split       | Test Group A mAP@0.5 |
+|-------------|---------------------:|
+| Depth-based (this study) | 0.496 +/- 0.035 |
+| Random (pooled, reshuffled, same sizes) | 0.749 +/- 0.023 |
+| **Inflation from leakage** | **+0.253 (+51%)** |
 
-The project includes heatmap and visual comparison artifacts:
+A random split lets near-duplicate images from the same slide/depth end up in
+both train and test, inflating reported accuracy. The depth-based split
+removes this leakage entirely.
 
-- `results/heatmaps/Heatmap-based using EigenCAM.png`
-- `results/model_comparison/Visual comparison of YOLOv8l vs. YOLOv26l.png`
-- `results/model_comparison/Detection accuracy (mAP@0.5) and inference speed (FPS).png`
+### Oversampling Ablation (rare pollen taxa)
 
-These figures are useful for the thesis and publication discussion because they show not only numerical performance, but also whether the models attend to biologically meaningful pollen structures.
+YOLOv12l, training images containing rare Group-A classes (<100 train
+instances: Rumex, Ulmus, Asteraceae, Cyperaceae, Apiaceae, Fagus, Salix)
+duplicated 3x; validation/test unchanged, 3 seeds:
 
-## Hardware Prototype
+| Metric (test slide 1188)              | Baseline        | Oversampled (3x) | Delta |
+|----------------------------------------|----------------:|------------------:|------:|
+| Group A macro-mAP@0.5                  | 0.496 +/- 0.035 | 0.494 +/- 0.002   | -0.002 |
+| Rare-class mean AP@0.5 (6 classes with test instances) | 0.349 | 0.339 | -0.010 |
 
-The microscope automation part is stored in `hardware/`.
+Oversampling does not improve rare-class detection — the bottleneck is the
+amount of underlying training data, not the sampling strategy.
 
-Main components:
+### Robustness (YOLOv12l, seed 1, Group A mAP@0.5)
 
-| Component | Purpose |
-|---|---|
-| Arduino MEGA 2560 | Controls the two stepper motors through Firmata |
-| 28BYJ-48 stepper motors | Move the microscope stage on X and Y axes |
-| ULN2003 drivers | Stepper motor driver boards |
-| Microscope camera | Provides live frames for detection |
-| 3D-printed parts | Mechanical coupling between motors and microscope stage |
+| Severity | Blur (sigma) | Noise (std) | Darkness (factor) |
+|---------:|----:|----:|----:|
+| Clean (0) | 0.536 | 0.536 | 0.536 |
+| 1 | 0.536 (sigma=1) | 0.461 (std=5)  | 0.555 (x0.80) |
+| 2 | 0.505 (sigma=2) | 0.299 (std=15) | 0.567 (x0.60) |
+| 3 | 0.493 (sigma=3) | 0.184 (std=25) | 0.559 (x0.40) |
+| 4 | 0.477 (sigma=5) | 0.074 (std=40) | 0.503 (x0.25) |
+| 5 | 0.402 (sigma=8) | 0.015 (std=60) | 0.396 (x0.10) |
 
-Arduino wiring and setup images:
+The model is markedly more sensitive to additive noise (near-total collapse by
+severity 5) than to blur or reduced brightness. Mild darkening (severity 1-3)
+does not hurt and slightly *improves* mAP, consistent with the source images
+being somewhat over-bright.
 
-- `hardware/arduino/setup.png`
-- `hardware/arduino/breadboard.png`
-- `hardware/arduino/schematic.png`
+### Expert Comparison
 
-3D-printable files:
-
-- `hardware/3d_details/base_stand.stl`
-- `hardware/3d_details/x-axis_drive_coupler.stl`
-- `hardware/3d_details/y-axis_drive_gear.stl`
+Model-derived relative pollen abundances vs. expert counts on 3 independent
+external slides (1008, 1016, 1020): **Pearson r = 0.86, Spearman rho = 0.80**.
+See `analysis/expert_comparison/relative_abundance.csv` and
+`analysis/paper_assets/fig_model_vs_expert.png`.
 
 ## Installation
 
@@ -148,97 +204,42 @@ From the `repo/` directory:
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt           # inference / scanner only
+pip install -r requirements-training.txt  # + training, ablations, analysis figures
 ```
 
-For training and evaluation scripts:
+## Related Prototype: Automated Microscope Stage
 
-```bash
-pip install -r requirements-training.txt
-```
-
-Flash **StandardFirmata** to the Arduino MEGA using the Arduino IDE:
-
-```text
-File -> Examples -> Firmata -> StandardFirmata
-```
-
-## Live Microscope Detection
-
-Edit `scanner/config.py` for your hardware:
-
-```python
-SERIAL_PORT = "/dev/cu.usbmodem14101"
-CAMERA_INDEX = 0
-MODEL_TYPE = "yolo"
-MODEL_PATH = "models/weights/best_yolo8.pt"
-CONF_THRESHOLD = 0.30
-```
-
-Run from the `repo/` directory:
+`hardware/` and `scanner/` contain an earlier-stage, related component: an
+Arduino MEGA + stepper-motor microscope stage with a live detection loop
+(`scanner/auto_scan.py`). It uses the legacy 24-class dataset described in
+`data/Dataset_info.txt` and the checkpoints in `models/weights/` (Git LFS),
+and is independent of the 22-class benchmark above.
 
 ```bash
 python3 -m scanner.auto_scan
 ```
 
-The application:
+Flash **StandardFirmata** to the Arduino MEGA via
+`File -> Examples -> Firmata -> StandardFirmata`, and edit `scanner/config.py`
+for your serial port, camera index, and model path.
 
-1. Connects to Arduino.
-2. Opens the microscope camera.
-3. Loads the selected detector.
-4. Moves the microscope stage.
-5. Runs live detection.
-6. Saves annotated images to `captures/`.
-7. Logs detections to `auto_scan_log.csv`.
+## Citation
 
-Press `q` to stop.
+If you use this code, please cite the paper (manuscript submitted to
+*Journal of Imaging*):
 
-## Experiments
+> Bazenova, A., Pál, I., & Magyari, E. K. *Leakage-Free Benchmarking of CNN
+> and Transformer Detectors for Automated Fossil Pollen Identification.*
+> Journal of Imaging (submitted).
 
-Training:
+If you use the dataset, please cite:
 
-```bash
-python3 experiments/training/training.py
-```
-
-Model evaluation:
-
-```bash
-python3 experiments/evaluation/model_evaluation_pipeline.py
-```
-
-Robustness evaluation:
-
-```bash
-python3 experiments/robustness/robustness_evaluator.py
-```
-
-Heatmap formatting:
-
-```bash
-python3 experiments/explainability/pollen_heatmap_visualizer.py
-```
-
-The experiment scripts assume the full dataset exists locally as `pollen_data/` in YOLO/Ultralytics format with a `data.yaml` file.
-
-## Publication Direction
-
-A strong thesis/publication framing is:
-
-> This work presents an end-to-end automated pollen identification prototype combining a custom annotated microscopy dataset, comparative detector evaluation, robustness analysis under microscopy-like degradation, heatmap-based model inspection, and a low-cost Arduino-driven automated microscope stage.
-
-Suggested discussion focus:
-
-- Dataset imbalance and its effect on rare pollen taxa.
-- Accuracy-speed tradeoff across YOLO and RT-DETR detectors.
-- Why clean validation metrics alone are not enough for microscope deployment.
-- Robustness advantage of YOLOv8l under blur, darkness, and noise.
-- Integration of computer vision with low-cost microscope automation.
-
-## Notes on Large Files
-
-The model checkpoints in `models/weights/` are stored with Git LFS because the `.pt` files are too large for normal GitHub commits.
+> Bazenova, A. (2026). *Fossil Pollen Detection Dataset (LIL-DEEP, Lake
+> Latoriței), v1* [Data set]. Zenodo. https://doi.org/10.5281/zenodo.20549576
 
 ## License
 
-Software code is released under the MIT License. Hardware files should be cited and licensed separately if they are published as open hardware.
+Software code is released under the MIT License (see `LICENSE`). The dataset
+on Zenodo is released under CC BY 4.0. Hardware files in `hardware/` should be
+cited and licensed separately if published as open hardware.
