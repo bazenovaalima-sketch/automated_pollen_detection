@@ -1,9 +1,5 @@
 # Leakage-Free Benchmarking of CNN and Transformer Detectors for Automated Fossil Pollen Identification
 
-Code and reproducibility materials for the paper *"Leakage-Free Benchmarking of
-CNN and Transformer Detectors for Automated Fossil Pollen Identification"*
-(Bazenova, Pál & Magyari), submitted to *Journal of Imaging*.
-
 The project benchmarks **seven object detectors** (six YOLO variants + RT-DETR)
 on a custom microscopy dataset of fossil pollen and non-pollen palynomorphs
 (NPPs) from the LIL-DEEP sediment core, Lake Latoriței, Southern Carpathians,
@@ -222,8 +218,8 @@ Flash **StandardFirmata** to the Arduino MEGA via
 for your serial port, camera index, and model path.
 
 ## Citation
-If you use the dataset, please cite:
 
+If you use the dataset, please cite:
 > Bazenova, A. (2026). *Fossil Pollen Detection Dataset (LIL-DEEP, Lake
 > Latoriței), v1* [Data set]. Zenodo. https://doi.org/10.5281/zenodo.20549576
 
